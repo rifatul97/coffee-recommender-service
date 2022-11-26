@@ -18,7 +18,9 @@ def get_redis_url():
             key_value_pair = {key.strip(): value.strip() for key, value in read_line}
             return key_value_pair['coffee_redis_key']
     else:
-        url = os.environ.get('coffee_redis_key')
+        # url = os.environ.get('coffee_redis_key')
+
+        url = "redis://red-cdva16g2i3mkucabv5tg:6379"
         return url
 
 
