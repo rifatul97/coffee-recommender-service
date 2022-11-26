@@ -20,7 +20,6 @@ def get_redis_url():
             return key_value_pair['coffee_redis_key']
     else:
         url = os.environ.get('coffee_redis_key')
-        print("url = " + url)
         return url
 
 
