@@ -5,7 +5,6 @@ from pathlib import Path
 import requests
 import io
 import json
-from flask_caching import Cache
 import redis
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.decomposition import NMF
