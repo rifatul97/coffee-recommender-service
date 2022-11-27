@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from pathlib import Path
 import requests
 import io
@@ -52,9 +52,10 @@ def get_number_of_coffee_reviews():
     print(unpacked_json[unpacked_json_len-1])
     load_unpacked_json = json.loads(unpacked_json)
 
-    number_of_coffee_review_text = "number of coffee reviews : " + str(len(load_unpacked_json))
+    number_of_coffee_review_text = "number_of_coffee_reviews: " + str(len(load_unpacked_json))
     number_of_coffee_roaster_text = ""  # "number of coffee roasters : " + str(len(coffee_roasters))
-    return number_of_coffee_roaster_text + "\n" + number_of_coffee_review_text
+
+    return number_of_coffee_review_text
 
 
 def readCoffeeReviewData():
