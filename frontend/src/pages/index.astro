@@ -1,15 +1,10 @@
 ---
-const url = "https://coffee-rec-service.onrender.com/get_number_of_coffee_reviews"
-const response =  fetch(url)
-      .then(response => {
-        console.log(response.text()) //Here is the text() i said before
-      })
-      .catch(error=>{
-        console.log(error)
-      })
-
-const data = response;
-const get_data_result = data;
+const real_url = "https://coffee-rec-service.onrender.com/get_number_of_coffee_reviews"
+const temp_url = "http://127.0.0.1:5000/get_number_of_coffee_reviews"
+const response = await fetch(temp_url);
+const data = await response.json();
+console.log(data.text)
+// const randomUser = data.results[0];
 ---
 
 <html lang="en">
@@ -22,8 +17,9 @@ const get_data_result = data;
 	</head>
 	<body>
 		<h1>Welcome to Coffee Recommender Service</h1>
-		<p>{JSON.stringify(response)}</p>
-		<!-- <p>{data.json}</p> -->
-		<!-- <p>{data.text}</p> -->
+		<p>{JSON.stringify(data)}</p>
+		<p>{data["number_of_coffee_reviews"]}</p>
+		<!-- <p>{JSON.stringify(response)}</p>
+		<p>{JSON.stringify(data)}</p> -->
 	</body>
 </html>

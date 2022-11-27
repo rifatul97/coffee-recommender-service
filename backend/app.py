@@ -52,8 +52,7 @@ def get_number_of_coffee_reviews():
     print(unpacked_json[unpacked_json_len-1])
     load_unpacked_json = json.loads(unpacked_json)
 
-    number_of_coffee_review_text = "number_of_coffee_reviews: " + str(len(load_unpacked_json))
-    number_of_coffee_roaster_text = ""  # "number of coffee roasters : " + str(len(coffee_roasters))
+    number_of_coffee_review_text = {"number_of_coffee_reviews" : str(len(load_unpacked_json))}
 
     return number_of_coffee_review_text
 
