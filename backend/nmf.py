@@ -9,37 +9,35 @@ from nltk.corpus import stopwords
 
 
 def computeFeatureModelling(redis):
-    redis.delete('get_coffee_features')
-    if redis.get('get_coffee_features') is None:
-        coffee_reviews = get_coffee_reviews_from_cache(redis)
-        stop_words = stopwords.words('english')
+    coffee_reviews = get_coffee_reviews_from_cache(redis)
+    stop_words = stopwords.words('english')
 
-        # Instantiate the vectorizer class with setting
-        vec = TfidfVectorizer(min_df=20,
-                              max_df=0.85,
-                              ngram_range=(1, 2),
-                              stop_words=stop_words,
-                              use_idf=True,
-                              smooth_idf=True)
+    # Instantiate the vectorizer class with setting
+    vec = TfidfVectorizer(min_df=20,
+                          max_df=0.85,
+                          ngram_range=(1, 2),
+                          stop_words=stop_words,
+                          use_idf=True,
+                          smooth_idf=True)
 
-        # Train the model and transform the data
-        tfIdf = vec.fit_transform(coffee_reviews[0:])
+    # Train the model and transform the data
+    tfIdf = vec.fit_transform(coffee_reviews[0:])
 
-        # visualize_feature_words(vec, tfIdf)
+    # visualize_feature_words(vec, tfIdf)
 
-        num_Of_feature_group = 9
+    num_Of_feature_group = 9
 
-        nmf = NMF(n_components=num_Of_feature_group)
+    nmf = NMF(n_components=num_Of_feature_group)
 
-        # fit the model to the tfIdf
-        H = nmf.fit_transform(tfIdf)
-        W = nmf.components_
+    # fit the model to the tfIdf
+    H = nmf.fit_transform(tfIdf)
+    W = nmf.components_
 
-        cache(redis, 'tfIdf_vec', pickle.dumps(vec))
-        cache(redis, 'tfIdf', pickle.dumps(tfIdf))
-        cache(redis, 'nmf_features', pickle.dumps(H))
-        cache(redis, 'nmf_component', pickle.dumps(W))
-        cache(redis, 'nmf_model', pickle.dumps(nmf))
+    cache(redis, 'tfIdf_vec', pickle.dumps(vec))
+    cache(redis, 'tfIdf', pickle.dumps(tfIdf))
+    cache(redis, 'nmf_features', pickle.dumps(H))
+    cache(redis, 'nmf_component', pickle.dumps(W))
+    cache(redis, 'nmf_model', pickle.dumps(nmf))
 
 
 def recommend_coffee_with_features(redis, list_of_features_requested):

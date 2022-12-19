@@ -7,6 +7,11 @@ console.log(data.text)
 // const randomUser = data.results[0];
 ---
 
+import { RuxCheckbox } from '@astrouxds/astro-web-components/dist/components/rux-checkbox.js';
+import { RuxCheckboxGroup } from '@astrouxds/astro-web-components/dist/components/rux-checkbox-group.js';
+customElements.define('rux-checkbox', RuxCheckbox)
+customElements.define('rux-checkbox-group', RuxCheckboxGroup)
+
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
@@ -17,9 +22,14 @@ console.log(data.text)
 	</head>
 	<body>
 		<h1>Welcome to Coffee Recommender Service</h1>
-		<p>{JSON.stringify(data)}</p>
+		<!-- <p>{JSON.stringify(data)}</p> -->
 		<p>{data}</p>
 		<!-- <p>{JSON.stringify(response)}</p>
 		<p>{JSON.stringify(data)}</p> -->
+		<rux-checkbox-group name="checkboxes" label="Checkbox group" required="">
+			<rux-checkbox value="one" name="checkboxes">One</rux-checkbox>
+			<rux-checkbox value="two" name="checkboxes">Two</rux-checkbox>
+			<rux-checkbox value="three" name="checkboxes">Three</rux-checkbox>
+		</rux-checkbox-group>
 	</body>
 </html>
