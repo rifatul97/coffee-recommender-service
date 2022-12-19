@@ -1,4 +1,6 @@
-from flask import Flask, request
+import json
+
+from flask import Flask, request, jsonify
 
 from nmf import computeFeatureModelling, recommend_coffee_with_features
 import redis
@@ -17,7 +19,9 @@ def home():
 
 @app.route('/get_features', methods=['GET'])
 def get_features():
-    return get_feature_words(r)
+    # number_of_coffee_review_text =\
+    #     {"features": str(get_feature_words(r)).replace("[", "").replace("]", "")}
+    return jsonify(get_feature_words(r))
 
 
 @app.route('/get_recommendations', methods=['GET'])
