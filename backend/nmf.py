@@ -38,7 +38,9 @@ def computeFeatureModelling(redis):
     redis.delete('nmf_features')
     redis.delete('nmf_component')
     redis.delete('nmf_model')
-
+    print("my protocal version = " + str(pickle.HIGHEST_PROTOCOL))
+    pickle.HIGHEST_PROTOCOL = 4;
+    print("now my protocal version = " + str(pickle.HIGHEST_PROTOCOL))
     cache(redis, 'tfIdf_vec', pickle.dumps(vec))
     cache(redis, 'tfIdf', pickle.dumps(tfIdf))
     cache(redis, 'nmf_features', pickle.dumps(H))
