@@ -73,6 +73,10 @@ def recommend_coffee_with_features(redis, list_of_features_requested):
 
 
 def get_feature_words(r):
+    print("here my protocal version = " + str(pickle.HIGHEST_PROTOCOL))
+    pickle.HIGHEST_PROTOCOL = 4;
+    print("now here my protocal version = " + str(pickle.HIGHEST_PROTOCOL))
+
     # get W, tfIdf vector from the redis database
     W = pickle.loads(r.get('nmf_W'))
     tfIdfVect = pickle.loads(r.get('tfIdf_vec'))
