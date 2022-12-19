@@ -33,6 +33,12 @@ def computeFeatureModelling(redis):
     H = nmf.fit_transform(tfIdf)
     W = nmf.components_
 
+    redis.delete('tfIdf_vec')
+    redis.delete('tfIdf')
+    redis.delete('nmf_features')
+    redis.delete('nmf_component')
+    redis.delete('nmf_model')
+
     cache(redis, 'tfIdf_vec', pickle.dumps(vec))
     cache(redis, 'tfIdf', pickle.dumps(tfIdf))
     cache(redis, 'nmf_features', pickle.dumps(H))

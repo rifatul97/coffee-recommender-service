@@ -3,14 +3,10 @@ const real_url = "https://coffee-rec-service.onrender.com/get_features"
 const temp_url = "http://127.0.0.1:5000/get_features"
 const response = await fetch(temp_url);
 const data = await response.json();
+const data_sp = data.replaceAll("[", "").replaceAll("]", "").replaceAll("'", "").split(",")
 console.log(data.text)
 // const randomUser = data.results[0];
 ---
-
-import { RuxCheckbox } from '@astrouxds/astro-web-components/dist/components/rux-checkbox.js';
-import { RuxCheckboxGroup } from '@astrouxds/astro-web-components/dist/components/rux-checkbox-group.js';
-customElements.define('rux-checkbox', RuxCheckbox)
-customElements.define('rux-checkbox-group', RuxCheckboxGroup)
 
 <html lang="en">
 	<head>
@@ -19,17 +15,38 @@ customElements.define('rux-checkbox-group', RuxCheckboxGroup)
 		<meta name="viewport" content="width=device-width" />
 		<meta name="generator" content={Astro.generator} />
 		<title>Coffee Recommender Service</title>
+		<link rel="preconnect" href="https://fonts.gstatic.com" />
+<link
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
+    rel="stylesheet"
+/>
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/@astrouxds/astro-web-components/dist/astro-web-components/astro-web-components.css"
+/>
+<script
+    type="module"
+    src="https://unpkg.com/@astrouxds/astro-web-components/dist/astro-web-components/astro-web-components.esm.js"
+></script>
 	</head>
 	<body>
 		<h1>Welcome to Coffee Recommender Service</h1>
 		<!-- <p>{JSON.stringify(data)}</p> -->
-		<p>{data}</p>
+		{data_sp.forEach(element => {
+			<p>{element}</p>
+		}) }
+		<rux-checkbox-group name="checkboxes" label="Checkbox group" required="">
+		{data_sp.forEach(element => {
+			<p>{element}</p>
+			<rux-checkbox value="one" name="checkboxes">element</rux-checkbox>
+		}) }
+		</rux-checkbox-group>
 		<!-- <p>{JSON.stringify(response)}</p>
 		<p>{JSON.stringify(data)}</p> -->
-		<rux-checkbox-group name="checkboxes" label="Checkbox group" required="">
-			<rux-checkbox value="one" name="checkboxes">One</rux-checkbox>
-			<rux-checkbox value="two" name="checkboxes">Two</rux-checkbox>
-			<rux-checkbox value="three" name="checkboxes">Three</rux-checkbox>
-		</rux-checkbox-group>
+		
+			
+			<!-- <rux-checkbox value="two" name="checkboxes">Two</rux-checkbox>
+			<rux-checkbox value="three" name="checkboxes">Three</rux-checkbox> -->
+		
 	</body>
 </html>
