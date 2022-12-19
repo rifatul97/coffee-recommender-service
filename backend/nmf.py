@@ -74,9 +74,11 @@ def recommend_coffee_with_features(redis, list_of_features_requested):
 
 def get_feature_words(r):
     # get W, tfIdf vector from the redis database
+    Z = pickle.loads(r.get('nmf_model'))
+    print(Z.n_components)
     W = pickle.loads(r.get('nmf_W'))
     X = pickle.loads(r.get('tfIdf'))
-    Z = pickle.loads(r.get('nmf_model'))
+
     tfIdfVect = pickle.loads(r.get('tfIdf_vec'))
 
     # get the feature names from the tfIdf vector
