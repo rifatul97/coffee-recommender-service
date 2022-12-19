@@ -38,7 +38,6 @@ def computeFeatureModelling(redis):
     pickle.HIGHEST_PROTOCOL = 4;
     print("now my protocal version = " + str(pickle.HIGHEST_PROTOCOL))
 
-
     cache(redis, 'tfIdf_vec', pickle.dumps(vec))
     cache(redis, 'tfIdf', pickle.dumps(tfIdf))
     cache(redis, 'nmf_features', pickle.dumps(H))
@@ -49,10 +48,12 @@ def computeFeatureModelling(redis):
 def recommend_coffee_with_features(redis, list_of_features_requested):
     # load from the redis database
     coffee_roasters = get_coffee_roasters(redis)
+    print("YES 1")
     nmf_model = pickle.loads(redis.get('nmf_model'))
+    print("YES 2")
     nmf_features = pickle.loads(redis.get('nmf_features'))
+    print("YES 3")
     tfIdf_vec = pickle.loads(redis.get('tfIdf_vec'))
-
 
     # tfIdf vector transform using the feature words as the input
     tfIdf_using_feature_words = tfIdf_vec.transform(list_of_features_requested).todense()
@@ -72,11 +73,10 @@ def recommend_coffee_with_features(redis, list_of_features_requested):
 
 
 def get_feature_words(r):
-
     # get W, tfIdf vector from the redis database
     W = pickle.loads(r.get('nmf_W'))
-    X = r.get('tfIdf')
-    Z = r.get('nmf_model')
+    X = pickle.loads(r.get('tfIdf'))
+    Z = pickle.loads(r.get('nmf_model'))
     tfIdfVect = pickle.loads(r.get('tfIdf_vec'))
 
     # get the feature names from the tfIdf vector
