@@ -14,7 +14,15 @@ r = redis.from_url(get_redis_url())
 
 @app.route('/', methods=['GET'])
 def home():
-    return ""
+    routes = {}
+    for r in app.url_map._rules:
+        routes[r.rule] = {}
+        routes[r.rule]["functionName"] = r.endpoint
+        routes[r.rule]["methods"] = list(r.methods)
+
+    routes.pop("/static/<path:filename>")
+
+    return jsonify(routes)
 
 
 @app.route('/get_features', methods=['GET'])

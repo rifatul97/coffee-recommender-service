@@ -1,12 +1,10 @@
-import dill
-import pickle
+import dill as pickle
 from redis_util import get_coffee_roasters, get_coffee_reviews_from_cache, cache
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.decomposition import NMF
 from sklearn.metrics import pairwise_distances
 from nltk.corpus import stopwords
-
 
 
 def computeFeatureModelling(redis):
