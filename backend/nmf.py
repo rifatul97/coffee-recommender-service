@@ -4,9 +4,9 @@ import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.decomposition import NMF
 from sklearn.metrics import pairwise_distances
-from nltk.corpus import stopwords
-
-stop_words = stopwords.words('english')
+# from nltk.corpus import stopwords
+#
+# stop_words = stopwords.words('english')
 
 
 def computeFeatureModelling(redis):
