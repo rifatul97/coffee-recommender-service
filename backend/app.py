@@ -43,7 +43,7 @@ def get_num_of_features_visualization():
     return visualize_number_of_feature(r)
 
 
-@app.route('/get_features/visualize', methods=['GET'])
+@app.route('/visualize_feature_words_from_blind_assessment', methods=['GET'])
 def display_feature_words_visualization():
     return visualize_feature_words(r)
 

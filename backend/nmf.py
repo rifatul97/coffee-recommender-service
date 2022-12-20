@@ -1,4 +1,7 @@
 import dill as pickle
+import numpy as np
+
+from visualizations import make_radar_chart
 from redis_util import get_coffee_roasters, get_coffee_reviews_from_cache, cache, checkIfValuesCached
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -7,7 +10,6 @@ from sklearn.metrics import pairwise_distances
 
 
 def trainNMFModel(redis):
-
     if checkIfValuesCached(redis, ['nmf_model', 'nmf_features', 'nmf_components']) is False:
         # load the tfIdf trained value
         tfIdf_blind_reviews_trained = tfIdf_for_blind_reviews(redis)['trained']
@@ -69,6 +71,10 @@ def get_feature_words(r):
 
 
 def recommend_coffee_with_features(redis, list_of_features_requested):
+    input = ['']
+    for feature in list_of_features_requested:
+        input[0] += feature
+        input[0] += " "
     # load from the redis database
     coffee_roasters = get_coffee_roasters(redis)
     nmf_model = pickle.loads(redis.get('nmf_model'))
@@ -78,17 +84,25 @@ def recommend_coffee_with_features(redis, list_of_features_requested):
     tfIdf_vec = tfIdf_for_blind_reviews(redis)['vec']
 
     # tfIdf vector transform using the feature words as the input
-    tfIdf_using_feature_words = tfIdf_vec.transform(list_of_features_requested).todense()
+    tfIdf_using_feature_words = tfIdf_vec.transform(input).todense()
     nmf_using_feature_words = nmf_model.transform(tfIdf_using_feature_words)
 
     similarities = pairwise_distances(nmf_using_feature_words.reshape
-                                      (len(list_of_features_requested), -1),
+                                      (1, -1),
                                       nmf_features, metric='cosine').argsort()
 
-    top_ten_coffee_recommendations = list(similarities[0][0:10])
+    recs = list(similarities[0][0:5])
     recommended_coffees = ""
-    for rec in top_ten_coffee_recommendations:
+    for rec in recs:
         recommended_coffees += str(coffee_roasters[rec])
         recommended_coffees += ", "
+
+    coffee_reviews = get_coffee_reviews_from_cache(redis)
+
+    t = ["" + coffee_reviews[recs[0]]]
+    vt = tfIdf_vec.transform(t).todense()
+    tt2 = nmf_model.transform(vt)
+
+    make_radar_chart(coffee_roasters[recs[0]], tt2.tolist()[0])
 
     return recommended_coffees

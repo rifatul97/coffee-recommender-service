@@ -8,6 +8,7 @@ import numpy as np
 from gensim.corpora import Dictionary
 from gensim.models import CoherenceModel, Nmf
 from matplotlib.figure import Figure
+import plotly.express as px
 from nltk import TweetTokenizer, SnowballStemmer
 from pandas import pandas as pd
 
@@ -16,9 +17,69 @@ from redis_util import get_coffee_reviews_from_cache
 
 def render_plot(fig):
     buf = io.BytesIO()
+    print("this fig is this - ")
+    print(type(fig))
     fig.savefig(buf, format="png")
+    # fig.write_image(buf, format='.png')
     data = base64.b64encode(buf.getbuffer()).decode("ascii")
     return f"<img src='data:image/png;base64,{data}'/>"
+
+
+def make_radar_chart(name, stats):
+    features = ['dark', 'tart', 'baking', 'savory', 'cocoa', 'orange', 'grapefruit', 'fresh', 'cherry']
+    labels = np.array(features)
+
+    angles = np.linspace(0, 2*np.pi, 9, endpoint=False)
+    fig = plt.figure()
+    ax = fig.add_subplot(111, polar=True)
+    ax.plot(angles, stats, 'o-', linewidth=2)
+    ax.fill(angles, stats, alpha=0.25)
+
+    ax.set_thetagrids(np.degrees(angles), labels)
+    ax.set_yticklabels([])
+    ax.set_theta_zero_location('N')
+    plt.show()
+
+
+def visualize_rec():
+    df = pd.DataFrame(dict(
+        r=[1, 5, 2, 2, 3],
+        theta=['processing cost', 'mechanical properties', 'chemical stability',
+               'thermal stability', 'device integration']))
+    fig = Figure()
+    fig.set_size_inches(12, 12)
+    ax = fig.subplots()
+
+    fig = px.line_polar(df, r='r', theta='theta', line_close=True)
+
+    return render_plot(fig)
+
+
+def display_frequency_chart(word_freq):
+    # Generate the figure **without using pyplot**.
+    fig = Figure()
+    fig.set_size_inches(12, 12)
+    ax = fig.subplots()
+
+    # Plot horizontal bar graph
+    word_freq.sort_values(by='count').plot.barh(x='words',
+                                                y='count',
+                                                ax=ax,
+                                                color="brown")
+    ax.set_title("Common Feature Words Appeared Throughout the Coffee Reviews")
+
+    return fig;
+
+
+def create_word_freq_df(words, counts):
+    cnt = Counter()
+    i = 0
+    for word in words:
+        cnt[word] = counts[i]
+        i += 1
+
+    return pd.DataFrame(cnt.most_common(10),
+                        columns=['words', 'count'])
 
 
 def visualize_feature_words(r):
@@ -35,33 +96,25 @@ def visualize_feature_words(r):
                              columns=['words', 'count'])
     word_freq.head()
 
-    # Generate the figure **without using pyplot**.
-    fig = Figure()
-    fig.set_size_inches(12, 12)
-    ax = fig.subplots()
-
-    # Plot horizontal bar graph
-    word_freq.sort_values(by='count').plot.barh(x='words',
-                                                y='count',
-                                                ax=ax,
-                                                color="brown")
-    ax.set_title("Common Feature Words Appeared Throughout the Coffee Reviews")
-
-    return render_plot(fig);
+    return render_plot(display_frequency_chart(word_freq))
 
 
-def casual_tokenizer(text):
+def tokenizer(text):
     return TweetTokenizer.tokenize(text=text)
 
 
 def process_text(text):
-    text = casual_tokenizer(text)
+    text = tokenizer(text)
     text = [t.lower() for t in text]
     text = [re.sub('[0-9]+', '', t) for t in text]
     text = [SnowballStemmer('english').stem(t) for t in text]
     text = [t for t in text if len(t) > 1]
     text = [t for t in text if ' ' not in t]
     return text
+
+
+def visualize_recommendations():
+    return ""
 
 
 def visualize_number_of_feature(r):
