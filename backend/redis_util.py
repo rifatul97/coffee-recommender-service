@@ -9,13 +9,15 @@ import io
 file_url = "https://raw.githubusercontent.com/rifatul97/coffee-recommender-service/main/data/coffee_reviews_cleaned.txt"
 
 
+def checkIfValuesCached(redis, keys):
+    for key in keys:
+        if redis.get(key) is None:
+            return False
+    return True
+
+
 def cache(r, key, value):
     r.set(key, value)
-    # if r.get(key) is None:
-    #     print("the key " + key + " is not stored!")
-    #     r.set(key, value)
-    # else:
-    #     print("the key " + key + " is already stored :)")
 
 
 def get_redis_url():
@@ -42,17 +44,13 @@ def get_coffee_reviews_from_cache(r):
 
 
 def readCoffeeReviewData(r):
-    # r.delete('coffee_reviews_json')
-    # r.delete('coffee_roasters_json')
-    #
-    get_coffee_review_cache = r.get('coffee_reviews_json')  # .decode('utf-8');
-    get_coffee_roaster_cache = r.get('coffee_roasters_json')  # .decode('utf-8');
-
-    if get_coffee_review_cache is None or get_coffee_roaster_cache is None:
+    if checkIfValuesCached(r, ['coffee_reviews_json', 'coffee_roasters_json']) is False:
         coffee_reviews = []
         coffee_roasters = []
+
         file_download = requests.get(file_url).content
         coffee_review_data = (io.StringIO(file_download.decode('utf-8')))
+
         for line in coffee_review_data.readlines():
             coffeeReview = line.rstrip().split(',')
             coffee_roaster = coffeeReview[0].strip()
@@ -62,3 +60,5 @@ def readCoffeeReviewData(r):
 
         r.append('coffee_reviews_json', json.dumps(coffee_reviews))
         r.append('coffee_roasters_json', json.dumps(coffee_roasters))
+    else:
+        print("seems coffee reviews present")

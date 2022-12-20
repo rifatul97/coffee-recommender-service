@@ -2,7 +2,7 @@ import json
 
 from flask import Flask, request, jsonify
 
-from nmf import computeFeatureModelling, recommend_coffee_with_features
+from nmf import trainNMFModel, recommend_coffee_with_features
 import redis
 from redis_util import get_redis_url, readCoffeeReviewData
 from visualizations import visualize_feature_words, visualize_number_of_feature
@@ -27,20 +27,15 @@ def home():
 
 @app.route('/get_features', methods=['GET'])
 def get_features():
-    # number_of_coffee_review_text =\
-    #     {"features": str(get_feature_words(r)).replace("[", "").replace("]", "")}
     return jsonify(get_feature_words(r))
 
 
 @app.route('/get_recommendations', methods=['GET'])
 def get_recommendation():
-    features = ['tart']
-    # features_requested = request.args.to_dict()
-    # features = []
-    # for arg in features_requested.values():
-    #     features.append(arg + " ")
-
-    return recommend_coffee_with_features(r, features)
+    features_requested = request.args.getlist("features")
+    if len(features_requested) == 0:
+        return ""
+    return recommend_coffee_with_features(r, features_requested)
 
 
 @app.route('/visualize_number_of_features', methods=['GET'])
@@ -55,5 +50,5 @@ def display_feature_words_visualization():
 
 if __name__ == '__main__':
     readCoffeeReviewData(r)
-    computeFeatureModelling(r)
+    trainNMFModel(r)
     app.run()

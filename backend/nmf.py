@@ -1,34 +1,37 @@
 import dill as pickle
-from redis_util import get_coffee_roasters, get_coffee_reviews_from_cache, cache
+from redis_util import get_coffee_roasters, get_coffee_reviews_from_cache, cache, checkIfValuesCached
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.decomposition import NMF
 from sklearn.metrics import pairwise_distances
-# from nltk.corpus import stopwords
-#
-# stop_words = stopwords.words('english')
 
 
-def computeFeatureModelling(redis):
-    tfIdf_blind_reviews = get_tfIdf(redis)
+def trainNMFModel(redis):
 
-    num_Of_feature_group = 9
+    if checkIfValuesCached(redis, ['nmf_model', 'nmf_features', 'nmf_components']) is False:
+        # load the tfIdf trained value
+        tfIdf_blind_reviews_trained = tfIdf_for_blind_reviews(redis)['trained']
 
-    nmf = NMF(n_components=num_Of_feature_group)
+        num_Of_feature_group = 9
 
-    # fit the model to the tfIdf
-    H = nmf.fit_transform(tfIdf_blind_reviews['transformed'])
-    W = nmf.components_
+        nmf = NMF(n_components=num_Of_feature_group)
 
-    # cache(redis, 'tfIdf_vec', pickle.dumps(vec))
-    # cache(redis, 'tfIdf', pickle.dumps(tfIdf))
-    cache(redis, 'nmf_features', pickle.dumps(H))
-    cache(redis, 'nmf_component', pickle.dumps(W))
-    cache(redis, 'nmf_model', pickle.dumps(nmf))
+        # fit the model to the tfIdf
+        H = nmf.fit_transform(tfIdf_blind_reviews_trained)
+        W = nmf.components_
+
+        cache(redis, 'nmf_features', pickle.dumps(H))
+        cache(redis, 'nmf_model', pickle.dumps(nmf))
+        cache(redis, 'nmf_components', pickle.dumps(W))
+    else:
+        print("nothing doing")
 
 
-def get_tfIdf(redis):
+def tfIdf_for_blind_reviews(redis):
+    # load blind assessment part of the coffee reviews
     coffee_reviews = get_coffee_reviews_from_cache(redis)
+    print(len(coffee_reviews))
+
     # Instantiate the vectorizer class with setting
     vec = TfidfVectorizer(min_df=20,
                           max_df=0.85,
@@ -40,26 +43,24 @@ def get_tfIdf(redis):
     # Train the model and transform the data
     tfIdf = vec.fit_transform(coffee_reviews[0:])
 
-    return {'vec': vec, 'transformed': tfIdf}
+    return {'vec': vec, 'trained': tfIdf}
 
 
 def get_feature_words(r):
     # get W from the redis database
-    W = pickle.loads(r.get('nmf_W'))
-    tfIdf_blind_reviews = get_tfIdf(r)
-
-    # tfIdfVect = pickle.loads(r.get('tfIdf_vec'))
+    W = pickle.loads(r.get('nmf_components'))
 
     # get the feature names from the tfIdf vector
-    feature_names = tfIdf_blind_reviews['vec'].get_feature_names_out()
+    tfIdf_vec = tfIdf_for_blind_reviews(r)['vec']
+    feature_names = tfIdf_vec.get_feature_names_out()
 
-    # convert W to panda dataframe format for iteration
-    nmf_tfIdfVect_df = pd.DataFrame(W, columns=feature_names)
+    # convert nmf_features to panda dataframe format for iteration
+    nmf_features_df = pd.DataFrame(W, columns=feature_names)
 
     # get the top feature words from each group of the model
     top_feature_words_of_each_groups = []
-    for group_num in range(nmf_tfIdfVect_df.shape[0]):
-        feature_words_of_the_group = nmf_tfIdfVect_df.iloc[group_num]
+    for group_num in range(nmf_features_df.shape[0]):
+        feature_words_of_the_group = nmf_features_df.iloc[group_num]
         top_feature_word = feature_words_of_the_group.nlargest(1)
         for feature_word, tfIdf_value in top_feature_word.iteritems():
             top_feature_words_of_each_groups.append(feature_word)
@@ -72,8 +73,9 @@ def recommend_coffee_with_features(redis, list_of_features_requested):
     coffee_roasters = get_coffee_roasters(redis)
     nmf_model = pickle.loads(redis.get('nmf_model'))
     nmf_features = pickle.loads(redis.get('nmf_features'))
-    tfIdf_vec = get_tfIdf(redis)['vec']
-    # tfIdf_vec = pickle.loads(redis.get('tfIdf_vec'))
+
+    # get tfIdf vector
+    tfIdf_vec = tfIdf_for_blind_reviews(redis)['vec']
 
     # tfIdf vector transform using the feature words as the input
     tfIdf_using_feature_words = tfIdf_vec.transform(list_of_features_requested).todense()
