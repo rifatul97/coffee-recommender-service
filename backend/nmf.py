@@ -70,12 +70,10 @@ def get_feature_words(r):
 def recommend_coffee_with_features(redis, list_of_features_requested):
     # load from the redis database
     coffee_roasters = get_coffee_roasters(redis)
-    print("YES 1")
     nmf_model = pickle.loads(redis.get('nmf_model'))
-    print("YES 2")
     nmf_features = pickle.loads(redis.get('nmf_features'))
-    print("YES 3")
-    tfIdf_vec = pickle.loads(redis.get('tfIdf_vec'))
+    tfIdf_vec = get_tfIdf(redis)['vec']
+    # tfIdf_vec = pickle.loads(redis.get('tfIdf_vec'))
 
     # tfIdf vector transform using the feature words as the input
     tfIdf_using_feature_words = tfIdf_vec.transform(list_of_features_requested).todense()

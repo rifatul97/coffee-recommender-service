@@ -34,10 +34,11 @@ def get_features():
 
 @app.route('/get_recommendations', methods=['GET'])
 def get_recommendation():
-    features_requested = request.args.to_dict()
-    features = []
-    for arg in features_requested.values():
-        features.append(arg + " ")
+    features = ['tart']
+    # features_requested = request.args.to_dict()
+    # features = []
+    # for arg in features_requested.values():
+    #     features.append(arg + " ")
 
     return recommend_coffee_with_features(r, features)
 
