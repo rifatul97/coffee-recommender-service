@@ -33,7 +33,7 @@ def get_tfIdf(redis):
     vec = TfidfVectorizer(min_df=20,
                           max_df=0.85,
                           ngram_range=(1, 2),
-                          stop_words=stop_words,
+                          stop_words='english',
                           use_idf=True,
                           smooth_idf=True)
 
