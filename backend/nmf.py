@@ -6,11 +6,29 @@ from sklearn.decomposition import NMF
 from sklearn.metrics import pairwise_distances
 from nltk.corpus import stopwords
 
+stop_words = stopwords.words('english')
+
 
 def computeFeatureModelling(redis):
-    coffee_reviews = get_coffee_reviews_from_cache(redis)
-    stop_words = stopwords.words('english')
+    tfIdf_blind_reviews = get_tfIdf(redis)
 
+    num_Of_feature_group = 9
+
+    nmf = NMF(n_components=num_Of_feature_group)
+
+    # fit the model to the tfIdf
+    H = nmf.fit_transform(tfIdf_blind_reviews['transformed'])
+    W = nmf.components_
+
+    # cache(redis, 'tfIdf_vec', pickle.dumps(vec))
+    # cache(redis, 'tfIdf', pickle.dumps(tfIdf))
+    cache(redis, 'nmf_features', pickle.dumps(H))
+    cache(redis, 'nmf_component', pickle.dumps(W))
+    cache(redis, 'nmf_model', pickle.dumps(nmf))
+
+
+def get_tfIdf(redis):
+    coffee_reviews = get_coffee_reviews_from_cache(redis)
     # Instantiate the vectorizer class with setting
     vec = TfidfVectorizer(min_df=20,
                           max_df=0.85,
@@ -22,39 +40,18 @@ def computeFeatureModelling(redis):
     # Train the model and transform the data
     tfIdf = vec.fit_transform(coffee_reviews[0:])
 
-    print("tfIdf type = " + str(type(tfIdf)))
-    print("vec type = " + str(type(vec)))
-
-    num_Of_feature_group = 9
-
-    nmf = NMF(n_components=num_Of_feature_group)
-
-    # fit the model to the tfIdf
-    H = nmf.fit_transform(tfIdf)
-    W = nmf.components_
-
-    print("my protocal version = " + str(pickle.HIGHEST_PROTOCOL))
-    # pickle.HIGHEST_PROTOCOL = 4;
-    # print("now my protocal version = " + str(pickle.HIGHEST_PROTOCOL))
-
-    cache(redis, 'tfIdf_vec', pickle.dumps(vec))
-    cache(redis, 'tfIdf', pickle.dumps(tfIdf))
-    cache(redis, 'nmf_features', pickle.dumps(H))
-    cache(redis, 'nmf_component', pickle.dumps(W))
-    cache(redis, 'nmf_model', pickle.dumps(nmf))
+    return {'vec': vec, 'transformed': tfIdf}
 
 
 def get_feature_words(r):
-    # get W, tfIdf vector from the redis database
-    Z = pickle.loads(r.get('nmf_model'))
-    print(Z.n_components)
+    # get W from the redis database
     W = pickle.loads(r.get('nmf_W'))
-    X = pickle.loads(r.get('tfIdf'))
+    tfIdf_blind_reviews = get_tfIdf(r)
 
-    tfIdfVect = pickle.loads(r.get('tfIdf_vec'))
+    # tfIdfVect = pickle.loads(r.get('tfIdf_vec'))
 
     # get the feature names from the tfIdf vector
-    feature_names = tfIdfVect.get_feature_names_out()
+    feature_names = tfIdf_blind_reviews['vec'].get_feature_names_out()
 
     # convert W to panda dataframe format for iteration
     nmf_tfIdfVect_df = pd.DataFrame(W, columns=feature_names)
