@@ -35,20 +35,15 @@ def tfIdf_for_blind_reviews(redis):
     # load blind assessment part of the coffee reviews
     blind_reviews = get_coffee_reviews_from_cache(redis)
 
-    from nltk.corpus import stopwords
-    sw = stopwords.words("english")
-    sw = sw + ['coffee', 'coffees', 'cup', 'john', 'diruocco', 'jen', 'apodaca', 'ken', 'kevin', 'keurig', 'espresso',
-               'serve', 'capsule', 'device', 'serving', 'flavor', 'notes', 'mouthfeel', 'aroma', 'finish', 'brewed',
-               'brewing', 'parts', 'one', 'two', 'three', 'evaluate', 'evaluated', 'hint']
     blind_reviews = [re.sub("[^a-zA-Z]", " ", s.lower()) for s in blind_reviews]
 
     # Instantiate the vectorizer class with setting
     tfIdf_vector = TfidfVectorizer(min_df=10,
                                    max_df=0.85,
                                    ngram_range=(1, 1),
-                                   stop_words='english')
-                                   # use_idf=True,
-                                   # smooth_idf=True)
+                                   stop_words='english',
+                                   use_idf=True,
+                                   smooth_idf=True)
 
     # Train the model and transform the data
     tfIdf_trained = tfIdf_vector.fit_transform(blind_reviews)
