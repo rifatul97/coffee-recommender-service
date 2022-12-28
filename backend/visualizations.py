@@ -1,64 +1,31 @@
 import base64
 import io
 import pickle
-import re
 from collections import Counter
 import matplotlib.pyplot as plt
 import numpy as np
 from gensim.corpora import Dictionary
 from gensim.models import CoherenceModel, Nmf
 from matplotlib.figure import Figure
-import plotly.express as px
-from nltk import TweetTokenizer, SnowballStemmer
 from pandas import pandas as pd
+from wordcloud import WordCloud
 
-from redis_util import get_coffee_reviews_from_cache
+from backend.nmf import tfIdf_for_blind_reviews
+from backend.text_utils import process_text
+from redis_util import get_coffee_reviews_from_cache, checkIfValuesCached, cache
 
 
 def render_plot(fig):
     buf = io.BytesIO()
-    print("this fig is this - ")
-    print(type(fig))
     fig.savefig(buf, format="png")
-    # fig.write_image(buf, format='.png')
     data = base64.b64encode(buf.getbuffer()).decode("ascii")
     return f"<img src='data:image/png;base64,{data}'/>"
-
-
-def make_radar_chart(name, stats):
-    features = ['dark', 'tart', 'baking', 'savory', 'cocoa', 'orange', 'grapefruit', 'fresh', 'cherry']
-    labels = np.array(features)
-
-    angles = np.linspace(0, 2*np.pi, 9, endpoint=False)
-    fig = plt.figure()
-    ax = fig.add_subplot(111, polar=True)
-    ax.plot(angles, stats, 'o-', linewidth=2)
-    ax.fill(angles, stats, alpha=0.25)
-
-    ax.set_thetagrids(np.degrees(angles), labels)
-    ax.set_yticklabels([])
-    ax.set_theta_zero_location('N')
-    plt.show()
-
-
-def visualize_rec():
-    df = pd.DataFrame(dict(
-        r=[1, 5, 2, 2, 3],
-        theta=['processing cost', 'mechanical properties', 'chemical stability',
-               'thermal stability', 'device integration']))
-    fig = Figure()
-    fig.set_size_inches(12, 12)
-    ax = fig.subplots()
-
-    fig = px.line_polar(df, r='r', theta='theta', line_close=True)
-
-    return render_plot(fig)
 
 
 def display_frequency_chart(word_freq):
     # Generate the figure **without using pyplot**.
     fig = Figure()
-    fig.set_size_inches(12, 12)
+    fig.set_size_inches(30, 30)
     ax = fig.subplots()
 
     # Plot horizontal bar graph
@@ -67,6 +34,7 @@ def display_frequency_chart(word_freq):
                                                 ax=ax,
                                                 color="brown")
     ax.set_title("Common Feature Words Appeared Throughout the Coffee Reviews")
+
 
     return fig;
 
@@ -83,8 +51,9 @@ def create_word_freq_df(words, counts):
 
 
 def visualize_feature_words(r):
-    word_list = pickle.loads(r.get('tfIdf_vec')).get_feature_names_out()
-    count_list = pickle.loads(r.get('tfIdf')).toarray().sum(axis=0)
+    tfidf = tfIdf_for_blind_reviews(r)
+    word_list = tfidf['vec'].get_feature_names_out()
+    count_list = tfidf['trained'].toarray().sum(axis=0)
 
     cnt = Counter()
     i = 0
@@ -92,47 +61,87 @@ def visualize_feature_words(r):
         cnt[word] = count_list[i]
         i += 1
 
-    word_freq = pd.DataFrame(cnt.most_common(50),
+    word_freq = pd.DataFrame(cnt.most_common(200),
                              columns=['words', 'count'])
     word_freq.head()
 
     return render_plot(display_frequency_chart(word_freq))
 
 
-def tokenizer(text):
-    return TweetTokenizer.tokenize(text=text)
+def visualize_feature_groups(r):
+    tfIdf = tfIdf_for_blind_reviews(r)
+    W = pickle.loads(r.get('nmf_components'))
+
+    tfIdf_vec = tfIdf['vec']
+    feature_names = tfIdf_vec.get_feature_names_out()
+
+    nmf_features_df = pd.DataFrame(W, columns=feature_names)
+
+    top_feature_words_of_each_groups = []
+    fig = plt.figure(figsize=(15, 12))
+    plt.subplots_adjust(hspace=0.5)
+    plt.suptitle("Feature Word Groups", fontsize=18, y=0.95)
+
+    for group_num in range(nmf_features_df.shape[0]):
+        feature_words_of_the_group = nmf_features_df.iloc[group_num]
+        top_feature_word = feature_words_of_the_group.nlargest(10)
+        tops = []
+        counts = []
+        for feature_word, tfIdf_value in top_feature_word.iteritems():
+            top_feature_words_of_each_groups.append(feature_word)
+            tops.append(feature_word)
+            counts.append(tfIdf_value)
+        df = pd.DataFrame({'word': tops,
+                           'count': counts})
+        data = df.set_index('word').to_dict()['count']
+        plt.subplot(4, 3, group_num + 1).set_title("Group #" + str(group_num + 1))
+        plt.imshow(WordCloud(margin=3, prefer_horizontal=0.7, scale=1, background_color='white',
+                             relative_scaling=0).generate_from_frequencies(data))
+        plt.axis("off")
+
+    return render_plot(fig)
 
 
-def process_text(text):
-    text = tokenizer(text)
-    text = [t.lower() for t in text]
-    text = [re.sub('[0-9]+', '', t) for t in text]
-    text = [SnowballStemmer('english').stem(t) for t in text]
-    text = [t for t in text if len(t) > 1]
-    text = [t for t in text if ' ' not in t]
-    return text
+def visualize_number_of_feature(r, start, end):
+    # if checkIfValuesCached(['k_values', 'coherence_scores']) is False:
+    scores = measureCoherenceScores(r)
+
+    k_values = scores['k_values']
+    coherence_scores = scores['coherence_scores']
+
+    fig = plt.figure(figsize=(15, 10))
+    ax = plt.plot(k_values, coherence_scores)
+    plt.xticks(k_values)
+    plt.xlabel("Number of Topics")
+    plt.ylabel("Mean Coherence")
+    # add the points
+    plt.scatter(k_values, coherence_scores, s=120)
+    # find and annotate the maximum point on the plot
+    ymax = max(coherence_scores)
+
+    xpos = coherence_scores.index(ymax)
+    best_k = k_values[xpos]
+    plt.annotate("k=%d" % best_k, xy=(best_k, ymax), xytext=(best_k, ymax),
+                 textcoords="offset points", fontsize=18)
+
+    return render_plot(fig)
 
 
-def visualize_recommendations():
-    return ""
-
-
-def visualize_number_of_feature(r):
+def measureCoherenceScores(r):
     coffee_reviews_words = []
     for review in get_coffee_reviews_from_cache(r):
         coffee_reviews_words.append(process_text(review))
 
     dictionary = Dictionary(coffee_reviews_words)
     dictionary.filter_extremes(
-        no_below=3,
+        no_below=20,
         no_above=0.85,
-        keep_n=5000
     )
 
     corpus = [dictionary.doc2bow(text) for text in coffee_reviews_words]
     min_num_of_feature_group = 6
-    max_num_of_feature_group = 20
-    step = 3
+    max_num_of_feature_group = 15
+    step = 1
 
     # Create a list of the feature numbers I want to try
     feature_nums = list(np.arange(min_num_of_feature_group, max_num_of_feature_group, step))
@@ -172,19 +181,6 @@ def visualize_number_of_feature(r):
         k_values.append(i)
         i += 1
 
-    fig = plt.figure(figsize=(15, 10))
-    ax = plt.plot(k_values, coherence_scores)
-    plt.xticks(k_values)
-    plt.xlabel("Number of Topics")
-    plt.ylabel("Mean Coherence")
-    # add the points
-    plt.scatter(k_values, coherence_scores, s=120)
-    # find and annotate the maximum point on the plot
-    ymax = max(coherence_scores)
-
-    xpos = coherence_scores.index(ymax)
-    best_k = k_values[xpos]
-    plt.annotate("k=%d" % best_k, xy=(best_k, ymax), xytext=(best_k, ymax),
-                 textcoords="offset points", fontsize=18)
-
-    return render_plot(fig)
+    return {'k_values': k_values, 'coherence_scores' : coherence_scores}
+    # cache(r, 'k_values', k_values)
+    # cache(r, 'coherence_scores', coherence_scores)

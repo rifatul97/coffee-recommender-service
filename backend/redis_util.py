@@ -43,22 +43,35 @@ def get_coffee_reviews_from_cache(r):
     return coffee_reviews
 
 
-def readCoffeeReviewData(r):
-    if checkIfValuesCached(r, ['coffee_reviews_json', 'coffee_roasters_json']) is False:
-        coffee_reviews = []
-        coffee_roasters = []
+def get_unmodified_coffee_reviews_from_file(r):
+    coffee_description_list = []
+    # coffee_link = []
+    with open("coffee_reviews_details.json", 'r', encoding="cp866") as json_file:
+        json_data = json.load(json_file)
+        for data in json_data:
+            coffee_description_list.append(data["Summary"])
 
-        file_download = requests.get(file_url).content
-        coffee_review_data = (io.StringIO(file_download.decode('utf-8')))
+    # base_url = "https://www.coffeereview.com/review/"
+    # with open("coffee_reviews_titles.json", 'r', encoding="cp866") as json_file:
+    #     json_data = json.load(json_file)
+    #     for data in json_data:
+    #         coffee_description_list.append(base_url + data["slug"])
 
-        for line in coffee_review_data.readlines():
-            coffeeReview = line.rstrip().split(',')
-            coffee_roaster = coffeeReview[0].strip()
-            coffee_review = coffeeReview[1].strip()
-            coffee_reviews.append(coffee_review)
-            coffee_roasters.append(coffee_roaster)
+    return coffee_description_list
 
-        r.append('coffee_reviews_json', json.dumps(coffee_reviews))
-        r.append('coffee_roasters_json', json.dumps(coffee_roasters))
-    else:
-        print("seems coffee reviews present")
+
+def readDatasetsAndCache(redis):
+    redis.delete('coffee_reviews_json')
+    redis.delete('coffee_roasters_json')
+    cleaned_coffee_reviews = []
+    coffee_roasters = []
+
+    with open("coffee_reviews_details.json", 'r', encoding="cp866") as json_file:
+        json_data = json.load(json_file)
+        print(len(json_data))
+        for data in json_data:
+            coffee_roasters.append(data["Name"])
+            cleaned_coffee_reviews.append(data["BlindReview"])
+
+        cache(redis, 'coffee_reviews_json', json.dumps(cleaned_coffee_reviews))
+        cache(redis, 'coffee_roasters_json', json.dumps(coffee_roasters))
