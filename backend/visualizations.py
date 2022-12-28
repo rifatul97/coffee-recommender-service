@@ -35,8 +35,7 @@ def display_frequency_chart(word_freq):
                                                 color="brown")
     ax.set_title("Common Feature Words Appeared Throughout the Coffee Reviews")
 
-
-    return fig;
+    return fig
 
 
 def create_word_freq_df(words, counts):
