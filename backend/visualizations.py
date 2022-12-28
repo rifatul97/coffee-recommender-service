@@ -10,8 +10,8 @@ from matplotlib.figure import Figure
 from pandas import pandas as pd
 from wordcloud import WordCloud
 
-from backend.nmf import tfIdf_for_blind_reviews
-from backend.text_utils import process_text
+from nmf import tfIdf_for_blind_reviews
+from text_utils import process_text
 from redis_util import get_coffee_reviews_from_cache, checkIfValuesCached, cache
 
 
