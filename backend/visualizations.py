@@ -1,6 +1,5 @@
 import base64
 import io
-import pickle
 from collections import Counter
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,9 +9,17 @@ from matplotlib.figure import Figure
 from pandas import pandas as pd
 from wordcloud import WordCloud
 
+from file_reader import get_feature_words
 from nmf import tfIdf_for_blind_reviews
 from text_utils import process_text
-from redis_util import get_coffee_reviews_from_cache, checkIfValuesCached, cache
+from redis_util import load_json_value_from_cache, load_pickle_value_from_cache
+
+
+def create_image(fig):
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png")
+    data = base64.b64encode(buf.getbuffer()).decode("ascii")
+    return data
 
 
 def render_plot(fig):
@@ -25,14 +32,14 @@ def render_plot(fig):
 def display_frequency_chart(word_freq):
     # Generate the figure **without using pyplot**.
     fig = Figure()
-    fig.set_size_inches(30, 30)
+    fig.set_size_inches(20, 20)
     ax = fig.subplots()
 
     # Plot horizontal bar graph
     word_freq.sort_values(by='count').plot.barh(x='words',
                                                 y='count',
-                                                ax=ax,
-                                                color="brown")
+                                                ax=ax)
+    # ,color="brown")
     ax.set_title("Common Feature Words Appeared Throughout the Coffee Reviews")
 
     return fig
@@ -49,8 +56,8 @@ def create_word_freq_df(words, counts):
                         columns=['words', 'count'])
 
 
-def visualize_feature_words(r):
-    tfidf = tfIdf_for_blind_reviews(r)
+def visualize_feature_words():
+    tfidf = tfIdf_for_blind_reviews()
     word_list = tfidf['vec'].get_feature_names_out()
     count_list = tfidf['trained'].toarray().sum(axis=0)
 
@@ -60,20 +67,18 @@ def visualize_feature_words(r):
         cnt[word] = count_list[i]
         i += 1
 
-    word_freq = pd.DataFrame(cnt.most_common(200),
+    word_freq = pd.DataFrame(cnt.most_common(100),
                              columns=['words', 'count'])
     word_freq.head()
 
-    return render_plot(display_frequency_chart(word_freq))
+    return create_image(display_frequency_chart(word_freq))
 
 
-def visualize_feature_groups(r):
-    tfIdf = tfIdf_for_blind_reviews(r)
-    W = pickle.loads(r.get('nmf_components'))
+def visualize_feature_groups():
+    tfIdf_vec = tfIdf_for_blind_reviews()['vec']
+    W = load_pickle_value_from_cache('nmf_components')
 
-    tfIdf_vec = tfIdf['vec']
     feature_names = tfIdf_vec.get_feature_names_out()
-
     nmf_features_df = pd.DataFrame(W, columns=feature_names)
 
     top_feature_words_of_each_groups = []
@@ -98,12 +103,11 @@ def visualize_feature_groups(r):
                              relative_scaling=0).generate_from_frequencies(data))
         plt.axis("off")
 
-    return render_plot(fig)
+    return create_image(fig)
 
 
-def visualize_number_of_feature(r, start, end):
-    # if checkIfValuesCached(['k_values', 'coherence_scores']) is False:
-    scores = measureCoherenceScores(r)
+def visualize_number_of_feature(start, end):
+    scores = measureCoherenceScores()
 
     k_values = scores['k_values']
     coherence_scores = scores['coherence_scores']
@@ -123,12 +127,12 @@ def visualize_number_of_feature(r, start, end):
     plt.annotate("k=%d" % best_k, xy=(best_k, ymax), xytext=(best_k, ymax),
                  textcoords="offset points", fontsize=18)
 
-    return render_plot(fig)
+    return create_image(fig)
 
 
 def measureCoherenceScores(r):
     coffee_reviews_words = []
-    for review in get_coffee_reviews_from_cache(r):
+    for review in load_json_value_from_cache('coffee_blind_reviews'):
         coffee_reviews_words.append(process_text(review))
 
     dictionary = Dictionary(coffee_reviews_words)
@@ -139,7 +143,7 @@ def measureCoherenceScores(r):
 
     corpus = [dictionary.doc2bow(text) for text in coffee_reviews_words]
     min_num_of_feature_group = 6
-    max_num_of_feature_group = 15
+    max_num_of_feature_group = 16
     step = 1
 
     # Create a list of the feature numbers I want to try
@@ -155,7 +159,6 @@ def measureCoherenceScores(r):
             corpus=corpus,
             num_topics=num,
             id2word=dictionary,
-            chunksize=2000,
             passes=5,
             kappa=.1,
             minimum_probability=0.01,
@@ -180,6 +183,49 @@ def measureCoherenceScores(r):
         k_values.append(i)
         i += 1
 
-    return {'k_values': k_values, 'coherence_scores' : coherence_scores}
-    # cache(r, 'k_values', k_values)
-    # cache(r, 'coherence_scores', coherence_scores)
+    return {'k_values': k_values, 'coherence_scores': coherence_scores}
+
+
+def visualize_user_feature_requested_count(redis, feature_words):
+    counts = []
+    for feature_word in feature_words:
+        count = redis.get(feature_word + '_count')
+        if count is None:
+            count = 0
+        else:
+            count = int(count.decode())
+        counts.append(count)
+
+    fig, ax = plt.subplots()
+    bars = ax.barh(feature_words, counts)
+
+    ax.bar_label(bars)
+
+    for bars in ax.containers:
+        ax.bar_label(bars)
+
+    return create_image(fig)
+
+
+def create_pie_chart(stats):
+    print(stats)
+    feature_words = get_feature_words()
+    show_label = []
+    sizes = []
+    for feature_num in range(len(feature_words)):
+        if stats[feature_num] > 0.001:
+            show_label.append(feature_words[feature_num])
+            sizes.append(stats[feature_num])
+    fig1, ax1 = plt.subplots()
+    ax1.pie(sizes, autopct='%1.1f%%', labels=show_label,
+            shadow=True, startangle=90)
+    total_sizes = 0
+    for size in sizes:
+        total_sizes += size
+    distributions = []
+    for size in sizes:
+        distributions.append((size * 100) / total_sizes)
+    labels = [f'{l}, {s:0.1f}%' for l, s in zip(show_label, distributions)]
+    plt.legend(bbox_to_anchor=(0.85, 1), loc='upper left', labels=labels)
+    plt.tight_layout()
+    return create_image(fig1)

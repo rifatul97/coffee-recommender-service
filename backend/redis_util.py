@@ -1,23 +1,8 @@
 import json
+import pickle
 from pathlib import Path
-
-import requests
-
 import os
-import io
-
-file_url = "https://raw.githubusercontent.com/rifatul97/coffee-recommender-service/main/data/coffee_reviews_cleaned.txt"
-
-
-def checkIfValuesCached(redis, keys):
-    for key in keys:
-        if redis.get(key) is None:
-            return False
-    return True
-
-
-def cache(r, key, value):
-    r.set(key, value)
+import redis
 
 
 def get_redis_url():
@@ -31,7 +16,23 @@ def get_redis_url():
         return url
 
 
-def get_coffee_roasters(r):
+def get_redis():
+    return redis.from_url(get_redis_url())
+
+
+def checkIfValuesCached(keys):
+    for key in keys:
+        if get_redis().get(key) is None:
+            return False
+    return True
+
+
+def cache(key, value):
+    if checkIfValuesCached([key]) is False:
+        get_redis().set(key, value)
+
+
+def get_coffee_roasters_from_cache(r):
     unpacked_coffee_roasters_json = r.get('coffee_roasters_json').decode('utf-8')
     coffee_roasters = json.loads(unpacked_coffee_roasters_json)
     return coffee_roasters
@@ -43,35 +44,38 @@ def get_coffee_reviews_from_cache(r):
     return coffee_reviews
 
 
-def get_unmodified_coffee_reviews_from_file(r):
-    coffee_description_list = []
-    # coffee_link = []
+def trackFeaturesUserSelected(feature_requested):
+    r = get_redis()
+    for feature in feature_requested:
+        count = r.get(feature + '_count');
+        if count is None:
+            r.set(feature + '_count', 1)
+        else:
+            count = int(count.decode())
+            count += 1
+            r.set(feature + '_count', count)
+
+
+def load_json_value_from_cache(key):
+    unpacked_coffee_roasters_json = get_redis().get(key).decode('utf-8')
+    loaded_json_value = json.loads(unpacked_coffee_roasters_json)
+    return loaded_json_value
+
+
+def load_pickle_value_from_cache(key):
+    unpacked_value = get_redis().get(key)
+    return pickle.loads(unpacked_value)
+
+
+def readDatasetsAndCache():
     with open("coffee_reviews_details.json", 'r', encoding="cp866") as json_file:
-        json_data = json.load(json_file)
-        for data in json_data:
-            coffee_description_list.append(data["Summary"])
+        uncleaned_coffee_reviews = []
+        coffee_roasters = []
 
-    # base_url = "https://www.coffeereview.com/review/"
-    # with open("coffee_reviews_titles.json", 'r', encoding="cp866") as json_file:
-    #     json_data = json.load(json_file)
-    #     for data in json_data:
-    #         coffee_description_list.append(base_url + data["slug"])
-
-    return coffee_description_list
-
-
-def readDatasetsAndCache(redis):
-    redis.delete('coffee_reviews_json')
-    redis.delete('coffee_roasters_json')
-    cleaned_coffee_reviews = []
-    coffee_roasters = []
-
-    with open("coffee_reviews_details.json", 'r', encoding="cp866") as json_file:
-        json_data = json.load(json_file)
-        print(len(json_data))
-        for data in json_data:
+        for data in json.load(json_file):
             coffee_roasters.append(data["Name"])
-            cleaned_coffee_reviews.append(data["BlindReview"])
+            uncleaned_coffee_reviews.append(data["BlindReview"])
 
-        cache(redis, 'coffee_reviews_json', json.dumps(cleaned_coffee_reviews))
-        cache(redis, 'coffee_roasters_json', json.dumps(coffee_roasters))
+        cache('coffee_blind_reviews', json.dumps(uncleaned_coffee_reviews))
+        cache('coffee_roasters', json.dumps(coffee_roasters))
+

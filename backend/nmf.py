@@ -1,25 +1,21 @@
-import base64
-import io
-import re
-
 import dill as pickle
-from matplotlib import pyplot as plt
+from sklearn.feature_extraction import text
 
-from redis_util import get_coffee_roasters, get_coffee_reviews_from_cache, cache, \
-    get_unmodified_coffee_reviews_from_file
+from visualizations import create_pie_chart
+from file_reader import get_unmodified_coffee_reviews_summary, get_stop_words
+from text_utils import clean_blind_reviews
+from redis_util import cache, load_json_value_from_cache, load_pickle_value_from_cache
+
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.decomposition import NMF
 from sklearn.metrics import pairwise_distances
 
 
-def trainNMFModel(redis):
-    redis.delete('nmf_model')
-    redis.delete('nmf_features')
-    redis.delete('nmf_components')
+def trainNMFModel():
+    # obtained the trained tfIdf value
+    tfIdf_trained = tfIdf_for_blind_reviews()['trained']
 
-    tfIdf_trained = tfIdf_for_blind_reviews(redis)['trained']
-
-    num_Of_feature_group = 11
+    num_Of_feature_group = 9
 
     nmf = NMF(n_components=num_Of_feature_group)
 
@@ -27,50 +23,48 @@ def trainNMFModel(redis):
     H = nmf.fit_transform(tfIdf_trained)
     W = nmf.components_
 
-    cache(redis, 'nmf_features', pickle.dumps(H))
-    cache(redis, 'nmf_model', pickle.dumps(nmf))
-    cache(redis, 'nmf_components', pickle.dumps(W))
+    cache('nmf_features', pickle.dumps(H))
+    cache('nmf_model', pickle.dumps(nmf))
+    cache('nmf_components', pickle.dumps(W))
 
-def tfIdf_for_blind_reviews(redis):
-    # load blind assessment part of the coffee reviews
-    blind_reviews = get_coffee_reviews_from_cache(redis)
 
-    blind_reviews = [re.sub("[^a-zA-Z]", " ", s.lower()) for s in blind_reviews]
+def tfIdf_for_blind_reviews():
+    # load blind assessment part of the coffee reviews from cache
+    blind_reviews = load_json_value_from_cache('coffee_blind_reviews')
+
+    # call function to remove the punctuations and numeric values
+    # and lowercase for each reviews
+    blind_reviews_cleaned = clean_blind_reviews(blind_reviews)
+
+    # default stop words list from the sklearn library
+    stop_words = text.ENGLISH_STOP_WORDS;
+
+    # some stop words findings added to the default stop words list
+    my_stop_words = stop_words.union(get_stop_words())
 
     # Instantiate the vectorizer class with setting
-    tfIdf_vector = TfidfVectorizer(min_df=10,
-                                   max_df=0.85,
+    tfIdf_vector = TfidfVectorizer(min_df=20,
+                                   max_df=0.25,
                                    ngram_range=(1, 1),
-                                   stop_words='english',
+                                   stop_words=my_stop_words,
                                    use_idf=True,
                                    smooth_idf=True)
 
     # Train the model and transform the data
-    tfIdf_trained = tfIdf_vector.fit_transform(blind_reviews)
+    tfIdf_trained = tfIdf_vector.fit_transform(blind_reviews_cleaned)
 
     return {'vec': tfIdf_vector, 'trained': tfIdf_trained}
 
 
-def get_feature_words():
-    coffee_feature_list = ['dark', 'cocoa', 'baking',
-                           'savory', 'cocoa', 'orange',
-                           'grapefruit', 'fresh', 'cherry']
-    return coffee_feature_list
-
-
-def recommend_coffee_with_features(redis, list_of_features_requested):
+def recommend_coffee_with_features(list_of_features_requested):
     # load various data from the redis database
-    coffee_roasters = get_coffee_roasters(redis)
-    coffee_blind_reviews = get_coffee_reviews_from_cache(redis)
-    coffee_descriptions = get_unmodified_coffee_reviews_from_file(redis)
-    nmf_model = pickle.loads(redis.get('nmf_model'))
-    nmf_features = pickle.loads(redis.get('nmf_features'))
+    coffee_roasters = load_json_value_from_cache('coffee_roasters')
+    coffee_blind_reviews = load_json_value_from_cache('coffee_blind_reviews')
+    nmf_model = load_pickle_value_from_cache('nmf_model')
+    nmf_features = load_pickle_value_from_cache('nmf_features')
 
     # get tfIdf vector
-    tfIdf_vec = tfIdf_for_blind_reviews(redis)['vec']
-
-    # store the notes of the coffee reviews
-    coffee_descriptions = [review for review in coffee_descriptions]
+    tfIdf_vec = tfIdf_for_blind_reviews()['vec']
 
     # tfIdf vector transform using the feature words as the input
     tfIdf_using_feature_words = tfIdf_vec.transform(list_of_features_requested).todense()
@@ -85,47 +79,39 @@ def recommend_coffee_with_features(redis, list_of_features_requested):
     # sort the similarities calculated by order
     similarities = similarities.argsort()
 
-    # get the highest 10 cosine similarities values
-    top_ten_recommendations = list(similarities[0][0:5])
+    # get the highest 5 cosine similarities values
+    top_five_recommendations = list(similarities[0][0:5])
 
+    # store the notes section of the unmodified coffee reviews
+    coffee_summaries = get_unmodified_coffee_reviews_summary()
+
+    # stores additional information for each recommended items
     recommended_coffees = []
-    for rec in top_ten_recommendations:
+    for rec in top_five_recommendations:
         coffee_blind_review = ["" + coffee_blind_reviews[rec]]
         tfIdf_blind = tfIdf_vec.transform(coffee_blind_review).todense()
         nmf_tfIdf_blind = nmf_model.transform(tfIdf_blind)
         genre_dist_chart_image_bytes = create_pie_chart(nmf_tfIdf_blind.tolist()[0])
         recommended_coffees.append({"coffeeRoasterName": str(coffee_roasters[rec]),
-                                    "description": coffee_descriptions[rec],
+                                    "description": coffee_summaries[rec],
                                     "imagebytes": genre_dist_chart_image_bytes})
 
     return recommended_coffees
 
 
-def create_image(fig):
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png")
-    data = base64.b64encode(buf.getbuffer()).decode("ascii")
-    return data
-    # return f"<img src='data:image/png;base64,{}'/>"
+def create_coffee_feature_distribution_chart(coffee_id):
+    tfIdf_vec = tfIdf_for_blind_reviews()['vec']
+    coffee_roaster = load_json_value_from_cache('coffee_roasters')[int(coffee_id) - 1]
+    unmodified_coffee_review = load_json_value_from_cache('coffee_blind_reviews')[int(coffee_id) - 1]
+    nmf_model = load_pickle_value_from_cache('nmf_model')
 
+    print("coffee roaster selected = " + coffee_roaster)
 
-def create_pie_chart(stats):
-    feature_words = ['dark', 'cocoa', 'baking',
-                     'espresso', 'sweet', 'grapefruit',
-                     'almond', 'lemon', 'cherry',
-                     'juicy', 'apricot']
-    show_label = []
-    sizes = []
-    for feature_num in range(len(feature_words)):
-        if stats[feature_num] > 0:
-            show_label.append(feature_words[feature_num])
-            sizes.append(stats[feature_num])
+    tfIdf_blind = tfIdf_vec.transform(clean_blind_reviews(["" + unmodified_coffee_review])).todense()
+    nmf_tfIdf_blind = nmf_model.transform(tfIdf_blind)
+    genre_dist_chart_image_bytes = create_pie_chart(nmf_tfIdf_blind.tolist()[0])
 
-    fig1, ax1 = plt.subplots()
-    ax1.pie(sizes, labels=show_label, autopct='%1.1f%%',
-            shadow=True, startangle=90) #, textprops={'fontsize': 14})
-    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-    plt.tight_layout()
-    # plt.show()
-    return create_image(fig1)
+    return {"coffeeRoasterName": str(coffee_roaster),
+            "description": unmodified_coffee_review,
+            "imagebytes": genre_dist_chart_image_bytes}
 

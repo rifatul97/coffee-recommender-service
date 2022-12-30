@@ -1,13 +1,12 @@
-import json
-
 from flask import Flask, request, jsonify, Response
-from nmf import trainNMFModel, recommend_coffee_with_features
-import redis
-from redis_util import get_redis_url, readDatasetsAndCache
-from visualizations import visualize_feature_words, visualize_number_of_feature, visualize_feature_groups
+
+from backend.file_reader import get_feature_words
+from nmf import trainNMFModel, recommend_coffee_with_features, create_coffee_feature_distribution_chart
+from redis_util import readDatasetsAndCache, trackFeaturesUserSelected, load_json_value_from_cache
+from visualizations import visualize_feature_words, visualize_number_of_feature, visualize_feature_groups, \
+    visualize_user_feature_requested_count
 
 app = Flask(__name__)
-redis = redis.from_url(get_redis_url())
 
 
 @app.after_request
@@ -28,21 +27,27 @@ def home():
 
     return jsonify(routes)
 
+@app.route('/get_coffee_roasters', methods=['GET'])
+def get_coffee_roasters():
+    return jsonify(load_json_value_from_cache('coffee_roasters'))
+
 
 @app.route('/get_features', methods=['GET'])
 def get_features():
-    feature_words = ['dark', 'cocoa', 'baking',
-                     'espresso', 'sweet', 'grapefruit',
-                     'almond', 'lemon', 'cherry',
-                     'juicy', 'apricot']
-
+    feature_words = get_feature_words()
     return jsonify(feature_words)
 
 
 @app.route('/get_recommendations', methods=['GET'])
 def get_recommendation():
     features_requested = [''.join([(feature + ' ') for feature in request.args.getlist("features")])]
-    return jsonify(recommend_coffee_with_features(redis, features_requested))
+    trackFeaturesUserSelected(request.args.getlist("features"))
+    return jsonify(recommend_coffee_with_features(features_requested))
+
+
+@app.route('/get_features/users/count', methods=['GET'])
+def get_user_feature_requested_counts_visual():
+    return jsonify(visualize_user_feature_requested_count(get_feature_words))
 
 
 @app.route('/visualize_number_of_features', methods=['GET'])
@@ -54,22 +59,26 @@ def get_num_of_features_visualization():
     elif int(start) < 0 or int(start) > int(end):
         return jsonify("enter valid start end")
 
-    return visualize_number_of_feature(redis, start, end)
+    return jsonify(visualize_number_of_feature(start, end))
 
 
-@app.route('/visualize_feature_words_from_blind_assessment', methods=['GET'])
+@app.route('/visualize_top_feature_words_from_blind_review', methods=['GET'])
 def display_feature_words_visualization():
-    return visualize_feature_words(redis)
+    return jsonify(visualize_feature_words())
 
 
 @app.route('/visualize_feature_groups', methods=['GET'])
 def display_feature_group():
-    return visualize_feature_groups(redis)
+    return jsonify(visualize_feature_groups())
+
+
+@app.route('/get_coffee_roaster_feature_distribution', methods=['GET'])
+def get_coffee_roaster_feature_distribution_chart():
+    coffee_id_selected = request.args.get("coffee_id")
+    return jsonify(create_coffee_feature_distribution_chart(coffee_id_selected))
 
 
 if __name__ == '__main__':
-    readDatasetsAndCache(redis)
-    trainNMFModel(redis)
+    readDatasetsAndCache()
+    trainNMFModel()
     app.run()
-
-
