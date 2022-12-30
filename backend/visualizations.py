@@ -9,8 +9,8 @@ from matplotlib.figure import Figure
 from pandas import pandas as pd
 from wordcloud import WordCloud
 
-from file_reader import get_feature_words
 from nmf import tfIdf_for_blind_reviews
+from file_reader import get_feature_words
 from text_utils import process_text
 from redis_util import load_json_value_from_cache, load_pickle_value_from_cache
 
@@ -20,14 +20,6 @@ def create_image(fig):
     fig.savefig(buf, format="png")
     data = base64.b64encode(buf.getbuffer()).decode("ascii")
     return data
-
-
-def render_plot(fig):
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png")
-    data = base64.b64encode(buf.getbuffer()).decode("ascii")
-    return f"<img src='data:image/png;base64,{data}'/>"
-
 
 def display_frequency_chart(word_freq):
     # Generate the figure **without using pyplot**.
@@ -205,27 +197,3 @@ def visualize_user_feature_requested_count(redis, feature_words):
         ax.bar_label(bars)
 
     return create_image(fig)
-
-
-def create_pie_chart(stats):
-    print(stats)
-    feature_words = get_feature_words()
-    show_label = []
-    sizes = []
-    for feature_num in range(len(feature_words)):
-        if stats[feature_num] > 0.001:
-            show_label.append(feature_words[feature_num])
-            sizes.append(stats[feature_num])
-    fig1, ax1 = plt.subplots()
-    ax1.pie(sizes, autopct='%1.1f%%', labels=show_label,
-            shadow=True, startangle=90)
-    total_sizes = 0
-    for size in sizes:
-        total_sizes += size
-    distributions = []
-    for size in sizes:
-        distributions.append((size * 100) / total_sizes)
-    labels = [f'{l}, {s:0.1f}%' for l, s in zip(show_label, distributions)]
-    plt.legend(bbox_to_anchor=(0.85, 1), loc='upper left', labels=labels)
-    plt.tight_layout()
-    return create_image(fig1)

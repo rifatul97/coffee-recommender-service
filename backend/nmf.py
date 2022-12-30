@@ -1,8 +1,11 @@
+import base64
+import io
+
 import dill as pickle
+from matplotlib import pyplot as plt
 from sklearn.feature_extraction import text
 
-from visualizations import create_pie_chart
-from file_reader import get_unmodified_coffee_reviews_summary, get_stop_words
+from file_reader import get_unmodified_coffee_reviews_summary, get_stop_words, get_feature_words
 from text_utils import clean_blind_reviews
 from redis_util import cache, load_json_value_from_cache, load_pickle_value_from_cache
 
@@ -115,3 +118,32 @@ def create_coffee_feature_distribution_chart(coffee_id):
             "description": unmodified_coffee_review,
             "imagebytes": genre_dist_chart_image_bytes}
 
+
+def create_pie_chart(stats):
+    feature_words = get_feature_words()
+    show_label = []
+    sizes = []
+    for feature_num in range(len(feature_words)):
+        if stats[feature_num] > 0.001:
+            show_label.append(feature_words[feature_num])
+            sizes.append(stats[feature_num])
+    fig1, ax1 = plt.subplots()
+    ax1.pie(sizes, autopct='%1.1f%%', labels=show_label,
+            shadow=True, startangle=90)
+    total_sizes = 0
+    for size in sizes:
+        total_sizes += size
+    distributions = []
+    for size in sizes:
+        distributions.append((size * 100) / total_sizes)
+    labels = [f'{l}, {s:0.1f}%' for l, s in zip(show_label, distributions)]
+    plt.legend(bbox_to_anchor=(0.85, 1), loc='upper left', labels=labels)
+    plt.tight_layout()
+    return create_image(fig1)
+
+
+def create_image(fig):
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png")
+    data = base64.b64encode(buf.getbuffer()).decode("ascii")
+    return data
