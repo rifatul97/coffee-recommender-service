@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, Response
 
-from backend.file_reader import get_feature_words
+from file_reader import get_feature_words
 from nmf import trainNMFModel, recommend_coffee_with_features, create_coffee_feature_distribution_chart
 from redis_util import readDatasetsAndCache, trackFeaturesUserSelected, load_json_value_from_cache
 from visualizations import visualize_feature_words, visualize_number_of_feature, visualize_feature_groups, \
