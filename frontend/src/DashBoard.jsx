@@ -7,8 +7,8 @@ export default function DashBoard() {
   const [imageByte, setImageByte] = useState("");
   const [coffeeRoasters, setCoffeeRoasters] = useState([]);
   const [fetchingStarted, setFetchingStarted] = useState(false);
-  const backEndUrl = "http://127.0.0.1:5000";
-  //https://coffee-rec-service.onrender.com/
+  // const backEndUrl = "http://127.0.0.1:5000";
+  const backEndUrl = "https://coffee-rec-service.onrender.com"
 
   const DashboardNavbarStyle = {
     lineHeight: "25px",
@@ -230,12 +230,12 @@ export default function DashBoard() {
     }
 
 
-    return (<>fetchingStarted ? <ShowLoading /> : <img
+    return (<>{fetchingStarted ? <ShowLoading /> : <img
     src={"data:image/png;base64," + imageByte}
-    width={500}
+    width={1000}
     height={500}
     alt=""
-  /></>)
+  />}</>)
   }
 
   function displayContent(i) {
@@ -249,31 +249,31 @@ export default function DashBoard() {
       id: 1,
       text: "User Features Selected Traffic",
       type: "descriptive",
-      description: "jjj",
+      description: "The Bar Chart displays each features the number of user searched. This will be useful for identifying the popularity",
     },
     {
       id: 2,
       text: "Common Feature Words Appeared on coffeereviews Dataset",
       type: "descriptive",
-      description: "The bar chart displays the number of feature words appeared throughout the coffee review based on the TF-IDF calculation. This visualization helped me to find the right setting for the TF-IDF model to generate the most amount of meaningful feature words in the top.",
+      description: "The Bar Chart displays the number of feature words appeared throughout the coffee review based on the TF-IDF model setting. This visualization helped me to identify and eliminate the stop-words and also finding the right setting for the TF-IDF model that will generate the most amount of meaningful feature words in the top.",
     },
     {
       id: 3,
       text: "NMF Model Output",
       type: "non-descriptive",
-      description: "",
+      description: "The visualization of the NMF model output using WordCloud. This visualization helped me to identify the feature word from each group that makes the most sense.",
     },
     {
       id: 4,
-      text: "View Coffee Roaster Feature Distribution",
+      text: "Coffee Roaster Feature Distribution",
       type: "descriptive",
-      description: "",
+      description: "Displays the distribution of features for each coffee roaster selected",
     },
     {
       id: 5,
       text: "NMF Model best fit",
-      type: "non-descriptive",
-      description: "lll",
+      type: "descriptive",
+      description: "Scatter plot visualization was used to find the peak value of the NMF evaluation. This was plotted using coherence score calculated for each number of component against number of component.",
     },
   ];
 
