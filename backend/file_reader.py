@@ -7,7 +7,7 @@ def get_stop_words():
     for line in file.readlines():
         fname = line.rstrip().split(',')
         for name in fname:
-            if name is not '':
+            if name != '':
                 stop_words.append(name)
     return stop_words
 
@@ -18,7 +18,7 @@ def get_feature_words():
     for line in file.readlines():
         fname = line.rstrip().split(',')
         for name in fname:
-            if name is not '':
+            if name != '':
                 feature_words.append(name)
     return feature_words
 

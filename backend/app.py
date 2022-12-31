@@ -27,6 +27,7 @@ def home():
 
     return jsonify(routes)
 
+
 @app.route('/get_coffee_roasters', methods=['GET'])
 def get_coffee_roasters():
     return jsonify(load_json_value_from_cache('coffee_roasters'))
@@ -47,19 +48,12 @@ def get_recommendation():
 
 @app.route('/get_features/users/count', methods=['GET'])
 def get_user_feature_requested_counts_visual():
-    return jsonify(visualize_user_feature_requested_count(get_feature_words))
+    return jsonify(visualize_user_feature_requested_count(get_feature_words()))
 
 
 @app.route('/visualize_number_of_features', methods=['GET'])
 def get_num_of_features_visualization():
-    start = request.args.get("from")
-    end = request.args.get("to")
-    if start is None or end is None:
-        return jsonify("must have start and end")
-    elif int(start) < 0 or int(start) > int(end):
-        return jsonify("enter valid start end")
-
-    return jsonify(visualize_number_of_feature(start, end))
+    return jsonify(visualize_number_of_feature())
 
 
 @app.route('/visualize_top_feature_words_from_blind_review', methods=['GET'])

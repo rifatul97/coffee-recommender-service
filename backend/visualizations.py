@@ -1,5 +1,6 @@
 import base64
 import io
+import pickle
 from collections import Counter
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,7 +13,7 @@ from wordcloud import WordCloud
 from nmf import tfIdf_for_blind_reviews
 from file_reader import get_feature_words
 from text_utils import process_text
-from redis_util import load_json_value_from_cache, load_pickle_value_from_cache
+from redis_util import load_json_value_from_cache, load_pickle_value_from_cache, get_redis
 
 
 def create_image(fig):
@@ -20,6 +21,7 @@ def create_image(fig):
     fig.savefig(buf, format="png")
     data = base64.b64encode(buf.getbuffer()).decode("ascii")
     return data
+
 
 def display_frequency_chart(word_freq):
     # Generate the figure **without using pyplot**.
@@ -98,7 +100,7 @@ def visualize_feature_groups():
     return create_image(fig)
 
 
-def visualize_number_of_feature(start, end):
+def visualize_number_of_feature():
     scores = measureCoherenceScores()
 
     k_values = scores['k_values']
@@ -122,8 +124,9 @@ def visualize_number_of_feature(start, end):
     return create_image(fig)
 
 
-def measureCoherenceScores(r):
+def measureCoherenceScores():
     coffee_reviews_words = []
+    redis = get_redis()
     for review in load_json_value_from_cache('coffee_blind_reviews'):
         coffee_reviews_words.append(process_text(review))
 
@@ -147,7 +150,11 @@ def measureCoherenceScores(r):
     i = min_num_of_feature_group
 
     for num in feature_nums:
-        nmf = Nmf(
+        # redis.delete('nmf_coherence_score_for_' + str(num))
+        nmf_val_count = redis.get('nmf_coherence_score_for_' + str(num));
+
+        if nmf_val_count is None:
+            nmf = Nmf(
             corpus=corpus,
             num_topics=num,
             id2word=dictionary,
@@ -161,25 +168,30 @@ def measureCoherenceScores(r):
             eval_every=10,
             normalize=True,
             random_state=42
-        )
+            )
 
-        # Run the coherence model to get the score
-        cm = CoherenceModel(
+            # Run the coherence model to get the score
+            cm = CoherenceModel(
             model=nmf,
             texts=coffee_reviews_words,
             dictionary=dictionary,
             coherence='c_v'
-        )
+            )
+            nmf_val_count = round(cm.get_coherence(), 5)
+            redis.set('nmf_coherence_score_for_' + str(num), pickle.dumps(nmf_val_count))
+        else:
+            nmf_val_count = pickle.loads(nmf_val_count)
 
-        coherence_scores.append(round(cm.get_coherence(), 5))
+        coherence_scores.append(nmf_val_count)
         k_values.append(i)
         i += 1
 
     return {'k_values': k_values, 'coherence_scores': coherence_scores}
 
 
-def visualize_user_feature_requested_count(redis, feature_words):
+def visualize_user_feature_requested_count(feature_words):
     counts = []
+    redis = get_redis()
     for feature_word in feature_words:
         count = redis.get(feature_word + '_count')
         if count is None:

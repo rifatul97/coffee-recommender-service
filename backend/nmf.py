@@ -115,7 +115,7 @@ def create_coffee_feature_distribution_chart(coffee_id):
     genre_dist_chart_image_bytes = create_pie_chart(nmf_tfIdf_blind.tolist()[0])
 
     return {"coffeeRoasterName": str(coffee_roaster),
-            "description": unmodified_coffee_review,
+            "description": str(unmodified_coffee_review),
             "imagebytes": genre_dist_chart_image_bytes}
 
 
