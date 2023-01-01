@@ -53,7 +53,7 @@ def get_user_feature_requested_counts_visual():
 
 @app.route('/get_nmf_best_fit_visual', methods=['GET'])
 def get_num_of_features_visualization():
-    with open("data_visualizations/NMF_BEST_FIT.png", "rb") as image_file:
+    with open("NMF_BEST_FIT.png", "rb") as image_file:
         encoded_string = base64.b64encode(image_file.read()).decode("ascii")
         return jsonify(str(encoded_string))
     return "no image file found"
@@ -61,7 +61,7 @@ def get_num_of_features_visualization():
 
 @app.route('/get_tfIdf_model_output_visual', methods=['GET'])
 def get_TFIDF_model_output_visual():
-    with open("data_visualizations/TF-IDF_MODEL_OUTPUT.png", "rb") as image_file:
+    with open("TF-IDF_MODEL_OUTPUT.png", "rb") as image_file:
         encoded_string = base64.b64encode(image_file.read()).decode("ascii")
         return jsonify(str(encoded_string))
     return "no image file found"
@@ -69,7 +69,7 @@ def get_TFIDF_model_output_visual():
 
 @app.route('/get_nmf_model_output_visual', methods=['GET'])
 def get_NMF_model_output_visual():
-    with open("data_visualizations/NMF_MODEL_OUTPUT.png", "rb") as image_file:
+    with open("NMF_MODEL_OUTPUT.png", "rb") as image_file:
         encoded_string = base64.b64encode(image_file.read()).decode("ascii")
         return jsonify(str(encoded_string))
     return "no image file found"
