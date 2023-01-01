@@ -71,7 +71,7 @@ export default function Home() {
   };
 
   const showLoading = () => {
-    return (<>Loading Feature Data...</>)
+    return (<>waiting for the Backend Server to fully start...</>)
   }
 
   function DisplayFeatureGroup() {
