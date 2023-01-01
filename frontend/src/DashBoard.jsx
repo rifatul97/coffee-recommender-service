@@ -255,7 +255,7 @@ export default function DashBoard() {
       id: 2,
       text: "Common Feature Words Appeared on coffeereviews Dataset",
       type: "descriptive",
-      description: "The Bar Chart displays the number of feature words appeared throughout the coffee review based on the TF-IDF model setting. This visualization helped me to identify and eliminate the stop-words and also finding the right setting for the TF-IDF model that will generate the most amount of meaningful feature words in the top.",
+      description: "The Bar Chart displays the number of feature words appeared throughout the coffee review. This visualization helped me to identify and eliminate the stop-words and also finding the right setting for the TF-IDF model that will generate the most amount of meaningful feature words in the top.",
     },
     {
       id: 3,
