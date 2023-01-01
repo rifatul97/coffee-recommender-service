@@ -246,7 +246,7 @@ export default function DashBoard() {
   const tabs = [
     {
       id: 1,
-      text: "User Features Selected Traffic",
+      text: "Users Features Selected Traffic",
       type: "descriptive",
       description: "The Bar Chart displays each features the number of user searched. This will be useful for identifying the popularity",
     },
