@@ -69,17 +69,26 @@ def visualize_feature_words():
 
 
 def visualize_feature_groups():
+    # get the vectorization form of the blind reviews established from the tfIdf model setting
     tfIdf_vec = tfIdf_for_blind_reviews()['vec']
+    # load the nmf component
     W = load_pickle_value_from_cache('nmf_components')
 
+    # get the feature words from the tfIdf vector
     feature_names = tfIdf_vec.get_feature_names_out()
+    # dataframe of the nmf component
     nmf_features_df = pd.DataFrame(W, columns=feature_names)
 
+    # will store the top feature words
     top_feature_words_of_each_groups = []
+
+    # created figure object from the matplotlib
     fig = plt.figure(figsize=(15, 12))
     plt.subplots_adjust(hspace=0.5)
     plt.suptitle("Feature Word Groups", fontsize=18, y=0.95)
 
+    # for each nmf group, get the top 10 words and their tfIdf value
+    # and generate wordcloud
     for group_num in range(nmf_features_df.shape[0]):
         feature_words_of_the_group = nmf_features_df.iloc[group_num]
         top_feature_word = feature_words_of_the_group.nlargest(10)
@@ -97,7 +106,8 @@ def visualize_feature_groups():
                              relative_scaling=0).generate_from_frequencies(data))
         plt.axis("off")
 
-    return create_image(fig)
+    # return create_image(fig)
+    plt.show()
 
 
 def visualize_number_of_feature():
