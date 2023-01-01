@@ -239,7 +239,6 @@ export default function DashBoard() {
   }
 
   function displayContent(i) {
-    console.log("that is " + i);
     setImageByte("");
     setSelected(i);
   }
