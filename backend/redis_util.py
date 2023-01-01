@@ -19,6 +19,14 @@ def get_redis_url():
 def get_redis():
     return redis.from_url(get_redis_url())
 
+def get_value_from_key(key):
+    return get_redis().get(key)
+
+
+def checkIfValueCached(key):
+    if get_redis().get(key) is None:
+        return False
+    return True
 
 def checkIfValuesCached(keys):
     for key in keys:
