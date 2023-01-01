@@ -267,7 +267,7 @@ export default function DashBoard() {
       id: 4,
       text: "Coffee Roaster Feature Distribution",
       type: "descriptive",
-      description: "Displays the distribution of features for each coffee roaster selected",
+      description: "Displays the distribution of features for each coffee roaster selected.",
     },
     {
       id: 5,
