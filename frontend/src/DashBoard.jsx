@@ -75,8 +75,6 @@ export default function DashBoard() {
 
   function DisplayCoffeeRoasterDistribution() {
     const [selectedCoffeeRoaster, setSelectedCoffeeRoaster] = useState("");
-    const [coffeeRoasterName, setcoffeeRoasterName] = useState("")
-    const [coffeeDescription, setCoffeeDescription] = useState("")
 
     const [coffeeData, setCoffeeData] = useState({name : '', description : '', pie_chart: ''})
     if (coffeeRoasters.length == 0) {
@@ -151,17 +149,17 @@ export default function DashBoard() {
     );
   }
 
-  function DisplayWordFreqChartOfCoffeeReviews() {
+  function DisplayTFIDFModelOutputVisualization() {
     if (imageByte === "") {
-      giveVisual("/visualize_top_feature_words_from_blind_review");
+      setImageByte("https://github.com/rifatul97/coffee-recommender-service/blob/main/frontend/public/TF-IDF_MODEL_OUTPUT.png?raw=true")
+      // giveVisual("/get_tfIdf_model_output_visual");
     }
 
     return (
       <>
         <img
-          src={"data:image/png;base64," + imageByte}
-          width={1100}
-          height={1500}
+        src={imageByte}
+          // src={"data:image/png;base64," + imageByte}
           alt=""
         />
       </>
@@ -169,8 +167,9 @@ export default function DashBoard() {
   }
 
   function DisplayNMFVisualization() {
-    if (imageByte === "" && fetchingStarted == false) {
-      giveVisual("/visualize_feature_groups");
+    if (imageByte === "") {
+      setImageByte("https://github.com/rifatul97/coffee-recommender-service/blob/main/frontend/public/NMF_MODEL_OUTPUT.png?raw=true")
+      // giveVisual("/get_nmf_model_output_visual");
     }
 
     return (
@@ -178,9 +177,8 @@ export default function DashBoard() {
         {imageByte !== "" ? (
           <>
             <img
-              src={"data:image/png;base64," + imageByte}
-              width={700}
-              height={700}
+              src={imageByte}
+              // src={"data:image/png;base64," + imageByte}
               alt=""
             />
           </>
@@ -199,7 +197,7 @@ export default function DashBoard() {
       case 2: {
         return (
           <>
-            <DisplayWordFreqChartOfCoffeeReviews />
+            <DisplayTFIDFModelOutputVisualization />
           </>
         );
       }
@@ -221,19 +219,17 @@ export default function DashBoard() {
         return <></>;
       }
     }
-    return <></>;
   }
 
   function DisplayNMFEvaluationCount () {
     if (imageByte == "") {
-      giveVisual("/visualize_number_of_features")
+      setImageByte("https://github.com/rifatul97/coffee-recommender-service/blob/main/frontend/public/NMF_BEST_FIT.png?raw=true")
+      // giveVisual("/get_nmf_best_fit_visual")
     }
 
 
-    return (<>{fetchingStarted ? <ShowLoading /> : <img
-    src={"data:image/png;base64," + imageByte}
-    width={1000}
-    height={500}
+    return (<>{imageByte === "" ? <ShowLoading /> : <img src={imageByte}
+    // src={"data:image/png;base64," + imageByte}
     alt=""
   />}</>)
   }
@@ -246,33 +242,33 @@ export default function DashBoard() {
   const tabs = [
     {
       id: 1,
-      text: "Users Features Selected Traffic",
+      text: "User Features Selected Traffic",
       type: "descriptive",
-      description: "The Bar Chart displays each features the number of user searched. This will be useful for identifying the popularity",
+      description: "This Non-Static Bar Chart visualization displays each features the number of user searched. This can be use for identifying the user feature selection popularity. This way, the stakeholders can improve the item catalog",
     },
     {
       id: 2,
       text: "Common Feature Words Appeared on coffeereviews Dataset",
       type: "descriptive",
-      description: "The Bar Chart displays the number of feature words appeared throughout the coffee review. This visualization helped me to identify and eliminate the stop-words and also finding the right setting for the TF-IDF model that will generate the most amount of meaningful feature words in the top.",
+      description: "The Bar Chart displays the number of feature words appeared throughout the coffee review based on the TF-IDF model setting. This visualization helped me to improve the TF-IDF model output result which is by repeatedly running the model and eliminate the stop-words that could appear on the top list and identify which initial setting gives the most number of meaningful words on the top.",
     },
     {
       id: 3,
       text: "NMF Model Output",
       type: "non-descriptive",
-      description: "The visualization of the NMF model output using WordCloud. This visualization helped me to identify the feature word from each group that makes the most sense.",
+      description: "The visualization of the NMF model output using WordCloud, that was trained using the TF-IDF model output. This visualization helped me to identify the feature word from each group as the larger and bolder text are dominating than other for each group. Based from the visualization, I have selected the feature words that makes the most sense.",
     },
     {
       id: 4,
       text: "Coffee Roaster Feature Distribution",
       type: "descriptive",
-      description: "Displays the distribution of features for each coffee roaster selected.",
+      description: "Displays the distribution of features for each coffee roaster selected",
     },
     {
       id: 5,
       text: "NMF Model best fit",
       type: "descriptive",
-      description: "Scatter plot visualization was used to find the peak value of the NMF evaluation. This was plotted using coherence score calculated for each number of component against number of component.",
+      description: "Scatter plot visualization was used to find the peak value of the NMF evaluation, i.e. to find the number of group to select for NMF model to produce the best output result. This was plotted using coherence score calculated for each number of component versus number of component. ",
     },
   ];
 
